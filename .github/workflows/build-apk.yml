@@ -1,0 +1,57 @@
+name: Build Viral Dance AI APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "ViralDanceAI_Android_Project.zip"
+      - ".github/workflows/build-apk.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Extract app project
+        run: |
+          unzip -o ViralDanceAI_Android_Project.zip
+          test -f ViralDanceAI_Android_Project/package.json
+          cd ViralDanceAI_Android_Project
+          echo "APP_DIR=$GITHUB_WORKSPACE/ViralDanceAI_Android_Project" >> "$GITHUB_ENV"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install JavaScript dependencies and create Android project
+        working-directory: ViralDanceAI_Android_Project
+        run: |
+          npm install
+          npx cap add android
+          npx cap sync android
+
+      - name: Build debug APK
+        working-directory: ViralDanceAI_Android_Project/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: viral-dance-ai-debug-apk
+          path: ViralDanceAI_Android_Project/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
